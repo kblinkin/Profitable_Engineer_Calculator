@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Business Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#0a0a0a; --surface:#111111; --surface2:#1a1a1a;
+    --border:#2a2a2a; --accent:#e8ff47; --accent2:#ff6b35;
+    --accent3:#7eb8ff; --accent4:#c084fc;
+    --text:#f0f0f0; --muted:#666; --muted2:#444;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:40px 20px;}
+  .noise{position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+  .container{max-width:980px;margin:0 auto;position:relative;z-index:1;}
+  header{margin-bottom:48px;}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:12px;}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,8vw,80px);line-height:.95;color:var(--text);margin-bottom:16px;}
+  h1 span{color:var(--accent);}
+  .subtitle{color:var(--muted);font-size:15px;line-height:1.6;max-width:500px;font-weight:300;}
+  .tabs{display:flex;gap:2px;margin-bottom:32px;background:var(--surface);padding:4px;border-radius:4px;border:1px solid var(--border);}
+  .tab{flex:1;padding:12px 16px;background:transparent;border:none;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .2s;}
+  .tab.active{background:var(--accent);color:#000;font-weight:700;}
+  .tab:hover:not(.active){color:var(--text);background:var(--surface2);}
+  .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--border);border:1px solid var(--border);border-radius:4px 4px 0 0;overflow:hidden;}
+  .inputs-panel{background:var(--surface);padding:32px;}
+  .summary-panel{background:var(--surface2);padding:32px;display:flex;flex-direction:column;}
+  .bottom-section{background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:28px 32px;}
+  .panel-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .field{margin-bottom:18px;}
+  .field-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+  .field-label{font-size:13px;font-weight:500;color:var(--text);}
+  .field-value{font-family:'Space Mono',monospace;font-size:13px;color:var(--accent);font-weight:700;}
+  .field-hint{font-size:11px;color:var(--muted);margin-bottom:6px;font-style:italic;}
+  input[type="range"]{width:100%;-webkit-appearance:none;height:2px;background:var(--border);outline:none;border-radius:2px;}
+  input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:pointer;transition:transform .15s;}
+  input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.3);}
+  .income-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+  .assumptions-box{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--muted2);padding:11px 13px;margin-top:4px;border-radius:2px;}
+  .assumptions-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+  .assumption-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);}
+  .assumption-row:last-child{border-bottom:none;}
+  .assumption-val{font-family:'Space Mono',monospace;color:var(--accent2);font-size:12px;}
+  .toggles-section{margin-top:18px;display:flex;flex-direction:column;gap:8px;}
+  .toggles-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+  .toggle-card{background:var(--bg);border:1px solid var(--border);border-radius:3px;overflow:hidden;transition:border-color .2s;}
+  .toggle-card.on.referral-card{border-color:rgba(126,184,255,.3);}
+  .toggle-card.on.superfan-card{border-color:rgba(192,132,252,.3);}
+  .toggle-header{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;cursor:pointer;user-select:none;}
+  .toggle-title{font-size:13px;font-weight:500;color:var(--muted);transition:color .2s;}
+  .toggle-card.on .toggle-title{color:var(--text);}
+  .toggle-subtitle{font-size:11px;color:var(--muted2);margin-top:1px;}
+  .toggle-switch{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+  .toggle-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:var(--muted);border-radius:50%;transition:all .2s;}
+  .toggle-card.on.referral-card .toggle-switch{background:var(--accent3);}
+  .toggle-card.on.superfan-card .toggle-switch{background:var(--accent4);}
+  .toggle-card.on .toggle-switch::after{left:19px;background:#fff;}
+  .toggle-body{display:none;padding:0 13px 13px;border-top:1px solid var(--border);}
+  .toggle-card.on .toggle-body{display:block;}
+  .toggle-body .field{margin-bottom:10px;margin-top:10px;}
+  .toggle-body .field:last-child{margin-bottom:0;}
+  .funnel{display:flex;flex-direction:column;gap:2px;margin-bottom:12px;}
+  .funnel-step{background:var(--bg);padding:10px 13px;border-left:3px solid var(--border);}
+  .hl-green{border-left-color:var(--accent)!important;}
+  .hl-orange{border-left-color:var(--accent2)!important;}
+  .funnel-step-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px;font-family:'Space Mono',monospace;}
+  .funnel-step-value{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);}
+  .funnel-step-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+  .arrow{text-align:center;color:var(--muted2);font-size:10px;padding:1px 0;}
+  .ltv-box{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent2);padding:10px 13px;margin-bottom:12px;border-radius:2px;}
+  .ltv-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+  .ltv-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .ltv-num{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--accent2);}
+  .ltv-desc{font-size:11px;color:var(--muted);}
+  .outcome{background:var(--accent);color:#000;padding:16px 20px;border-radius:2px;margin-bottom:12px;}
+  .outcome-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px;opacity:.6;}
+  .outcome-value{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;}
+  .outcome-sub{font-size:12px;margin-top:4px;opacity:.65;font-weight:300;}
+  .active-features{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:12px;}
+  .feature-tag{font-family:'Space Mono',monospace;font-size:10px;padding:3px 8px;border-radius:2px;letter-spacing:.05em;}
+  .feature-tag.ref{background:rgba(126,184,255,.12);color:var(--accent3);border:1px solid rgba(126,184,255,.2);}
+  .feature-tag.sf{background:rgba(192,132,252,.12);color:var(--accent4);border:1px solid rgba(192,132,252,.2);}
+  .table-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .year-table{width:100%;border-collapse:collapse;}
+  .year-table th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 8px 10px;text-align:right;font-weight:400;white-space:nowrap;}
+  .year-table th:first-child{text-align:left;}
+  .year-table td{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);padding:7px 8px;text-align:right;border-top:1px solid #181818;white-space:nowrap;}
+  .year-table td:first-child{text-align:left;color:var(--text);font-size:12px;}
+  .year-table tr.goal-hit td{color:var(--text);}
+  .year-table tr.goal-hit td.total-col{color:var(--accent);font-weight:700;}
+  .year-table tr.goal-hit{background:rgba(232,255,71,.03);}
+  .year-table tr.goal-hit td:first-child::after{content:' ✓';color:var(--accent);}
+  .ref-col{color:var(--accent3)!important;}
+  .sf-col{color:var(--accent4)!important;}
+  .bar-track{background:var(--border);height:3px;border-radius:2px;overflow:hidden;margin-top:4px;width:70px;margin-left:auto;}
+  .bar-fill{height:3px;border-radius:2px;background:var(--accent2);}
+  .bar-fill.hit{background:var(--accent);}
+  .reality-note{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);line-height:1.7;}
+  .reality-note strong{color:var(--accent2);font-weight:500;}
+  @media(max-width:700px){.top-grid{grid-template-columns:1fr;}.income-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="container">
+  <header>
+    <div class="eyebrow">Mastering.com — Business Builder</div>
+    <h1>The <span>Math</span><br>Behind the<br>Dream</h1>
+    <p class="subtitle">Plug in your numbers. See exactly what consistent outreach builds — and how long it really takes.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('mastering',this)">Mastering</button>
+    <button class="tab" onclick="switchTab('mixing',this)">Mixing</button>
+    <button class="tab" onclick="switchTab('production',this)">Production</button>
+  </div>
+
+  <div class="top-grid">
+    <div class="inputs-panel">
+      <div class="panel-label">Your Numbers</div>
+      <div class="income-row">
+        <div class="field">
+          <div class="field-header"><span class="field-label">Income Goal</span><span class="field-value" id="incomeDisplay">$48,000</span></div>
+          <div class="field-hint">Annual target</div>
+          <input type="range" id="income" min="12000" max="200000" step="1000" value="48000" oninput="update()">
+        </div>
+        <div class="field">
+          <div class="field-header"><span class="field-label">Rate Per Project</span><span class="field-value" id="rateDisplay">$85</span></div>
+          <div class="field-hint" id="rateHint">Industry: $75–100</div>
+          <input type="range" id="rate" min="50" max="500" step="5" value="85" oninput="update()">
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-header"><span class="field-label">Cold Emails / Month</span><span class="field-value" id="emailsDisplay">100</span></div>
+        <div class="field-hint">Sustainable pace: 80–120/mo</div>
+        <input type="range" id="emails" min="10" max="500" step="10" value="100" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><span class="field-label">Outreach Response Rate</span><span class="field-value" id="responseDisplay">10%</span></div>
+        <div class="field-hint">Industry avg: ~10% of cold emails get a reply</div>
+        <input type="range" id="response" min="1" max="40" step="1" value="10" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><span class="field-label">Proof Session Accept Rate</span><span class="field-value" id="acceptDisplay">50%</span></div>
+        <div class="field-hint">Of those who reply, ~50% accept a free proof session</div>
+        <input type="range" id="accept" min="5" max="90" step="5" value="50" oninput="update()">
+      </div>
+      <div class="field">
+        <div class="field-header"><span class="field-label">Proof Session Convert Rate</span><span class="field-value" id="convertDisplay">25%</span></div>
+        <div class="field-hint">Of those who do a proof session, ~25% become paying clients</div>
+        <input type="range" id="convert" min="5" max="80" step="5" value="25" oninput="update()">
+      </div>
+
+      <div class="assumptions-box">
+        <div class="assumptions-label">Baked-In Assumptions</div>
+        <div class="assumption-row"><span>Proof session</span><span class="assumption-val">Free (one-time)</span></div>
+        <div class="assumption-row"><span>Sessions per regular client / yr</span><span class="assumption-val" id="sessionsDisplay">7</span></div>
+        <div class="assumption-row"><span>Retention decay Yr 1→2→3→4→5+</span><span class="assumption-val">50→40→30→20→10%</span></div>
+      </div>
+
+      <div class="toggles-section">
+        <div class="toggles-label">Optional Variables</div>
+
+        <div class="toggle-card referral-card" id="referralCard">
+          <div class="toggle-header" onclick="toggleCard('referral')">
+            <div>
+              <div class="toggle-title">Referrals</div>
+              <div class="toggle-subtitle">% of paying clients refer someone per year</div>
+            </div>
+            <div class="toggle-switch"></div>
+          </div>
+          <div class="toggle-body">
+            <div class="field" style="margin-top:10px;margin-bottom:0">
+              <div class="field-header"><span class="field-label" style="color:var(--accent3)">Referral Rate</span><span class="field-value" id="referralRateDisplay" style="color:var(--accent3)">10%</span></div>
+              <div class="field-hint">% of all active paying clients who refer someone per year. Referrals skip the proof session.</div>
+              <input type="range" id="referralRate" min="1" max="50" step="1" value="10" oninput="update()">
+            </div>
+          </div>
+        </div>
+
+        <div class="toggle-card superfan-card" id="superfanCard">
+          <div class="toggle-header" onclick="toggleCard('superfan')">
+            <div>
+              <div class="toggle-title">Super Fans</div>
+              <div class="toggle-subtitle">Busy artists or mix engineers who send 20–30+ masters/yr</div>
+            </div>
+            <div class="toggle-switch"></div>
+          </div>
+          <div class="toggle-body">
+            <div class="field" style="margin-top:10px">
+              <div class="field-header"><span class="field-label" style="color:var(--accent4)">Super Fans Added / Year</span><span class="field-value" id="sfCountDisplay" style="color:var(--accent4)">1</span></div>
+              <div class="field-hint">How many you realistically land through outreach each year</div>
+              <input type="range" id="sfCount" min="1" max="20" step="1" value="1" oninput="update()">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <div class="field-header"><span class="field-label" style="color:var(--accent4)">Sessions / Super Fan / Year</span><span class="field-value" id="sfSessionsDisplay" style="color:var(--accent4)">25</span></div>
+              <div class="field-hint">Avg masters they send per year (vs 7 for regular clients)</div>
+              <input type="range" id="sfSessions" min="20" max="60" step="5" value="25" oninput="update()">
+            </div>
+            <div style="font-size:11px;color:var(--muted);font-style:italic;padding-top:8px;border-top:1px solid var(--border);line-height:1.6;">
+              Retention: 80% → 70% → 60% → 50% (yrs 4–9) → 10% floor
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-panel">
+      <div class="panel-label">Your Pipeline</div>
+      <div class="funnel">
+        <div class="funnel-step hl-green">
+          <div class="funnel-step-label">Cold Emails / Month</div>
+          <div class="funnel-step-value" id="r-emails">100</div>
+          <div class="funnel-step-sub">your monthly commitment</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="funnel-step">
+          <div class="funnel-step-label">Replies / Month</div>
+          <div class="funnel-step-value" id="r-replies">10.0</div>
+          <div class="funnel-step-sub" id="r-replies-sub">at 10% response rate</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="funnel-step">
+          <div class="funnel-step-label">Proof Sessions / Month</div>
+          <div class="funnel-step-value" id="r-proof">5.0</div>
+          <div class="funnel-step-sub" id="r-proof-sub">at 50% accept rate</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="funnel-step hl-orange">
+          <div class="funnel-step-label">New Paying Clients / Month</div>
+          <div class="funnel-step-value" id="r-clients">1.3</div>
+          <div class="funnel-step-sub" id="r-clients-sub">at 25% conversion</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border:1px solid var(--border);padding:10px 13px;margin-bottom:12px;border-radius:2px;">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Effective Email → Client Rate</div>
+        <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--text)" id="r-effective">1.25%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="r-effective-sub">1 paying client per 80 emails</div>
+      </div>
+
+      <div class="ltv-box">
+        <div class="ltv-label">Year 1 Client Value</div>
+        <div class="ltv-row">
+          <div class="ltv-num" id="r-ltv-reg">$595</div>
+          <div class="ltv-desc" id="r-ltv-reg-desc">regular · 7 × $85</div>
+        </div>
+        <div class="ltv-row" id="r-ltv-sf-row" style="margin-top:6px;display:none;">
+          <div class="ltv-num" style="color:var(--accent4)" id="r-ltv-sf">$2,125</div>
+          <div class="ltv-desc" id="r-ltv-sf-desc" style="color:var(--accent4)">super fan · 25 × $85</div>
+        </div>
+      </div>
+
+      <div class="outcome" style="margin-top:auto;">
+        <div class="outcome-label">Years to Hit Your Goal</div>
+        <div class="outcome-value" id="r-timeline">—</div>
+        <div class="outcome-sub" id="r-timeline-sub">to reach $48,000/year</div>
+      </div>
+
+      <div class="active-features" id="activeFeatures"></div>
+    </div>
+  </div>
+
+  <div class="bottom-section">
+    <div class="table-label">Year-by-Year Income Projection</div>
+    <div style="overflow-x:auto;">
+      <table class="year-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>New Clients</th>
+            <th>Returning</th>
+            <th>New Rev</th>
+            <th>Return Rev</th>
+            <th id="refHeader" style="display:none">Referral Rev</th>
+            <th id="sfHeader" style="display:none">Super Fan Rev</th>
+            <th>Total / Year</th>
+            <th>To Goal</th>
+          </tr>
+        </thead>
+        <tbody id="yearTableBody"></tbody>
+      </table>
+    </div>
+    <div class="reality-note" id="r-message">
+      Most people quit at month three — not because the system failed, but because <strong>they didn't know the timeline going in.</strong>
+    </div>
+  </div>
+</div>
+
+<script>
+const configs = {
+  mastering: { rateMin:50, rateMax:300, rateDefault:85, rateStep:5, rateHint:'Industry: $75–100', responseDefault:10, convertDefault:25, sessPerClient:7 },
+  mixing:    { rateMin:100, rateMax:1000, rateDefault:300, rateStep:25, rateHint:'Industry: $300–500', responseDefault:8, convertDefault:25, sessPerClient:4 },
+  production:{ rateMin:500, rateMax:10000, rateDefault:1000, rateStep:100, rateHint:'Starting rate: $1,000+', responseDefault:6, convertDefault:25, sessPerClient:2 }
+};
+let currentConfig = configs.mastering;
+let referralOn = false, superfanOn = false;
+
+function retentionRate(age) {
+  // Regular client retention decay
+  if (age === 1) return 0.50;
+  if (age === 2) return 0.40;
+  if (age === 3) return 0.30;
+  if (age === 4) return 0.20;
+  return 0.10;
+}
+
+function sfRetentionRate(age) {
+  // Super fan retention — much stickier
+  if (age === 1) return 0.80;
+  if (age === 2) return 0.70;
+  if (age === 3) return 0.60;
+  if (age >= 4 && age <= 9) return 0.50;
+  return 0.10; // floor after year 10
+}
+
+function toggleCard(type) {
+  if (type === 'referral') { referralOn = !referralOn; document.getElementById('referralCard').classList.toggle('on', referralOn); }
+  else { superfanOn = !superfanOn; document.getElementById('superfanCard').classList.toggle('on', superfanOn); }
+  update();
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentConfig = configs[tab];
+  const c = currentConfig;
+  const r = document.getElementById('rate');
+  r.min = c.rateMin; r.max = c.rateMax; r.step = c.rateStep; r.value = c.rateDefault;
+  document.getElementById('response').value = c.responseDefault;
+  document.getElementById('convert').value  = c.convertDefault;
+  document.getElementById('accept').value   = 50;
+  document.getElementById('rateHint').textContent       = c.rateHint;
+  document.getElementById('sessionsDisplay').textContent = c.sessPerClient;
+  update();
+}
+
+const fmt  = n => n.toLocaleString('en-US', {maximumFractionDigits:0});
+const fmtM = n => '$' + fmt(Math.round(n));
+const fmtD = n => (Math.round(n*10)/10).toFixed(1);
+
+function update() {
+  const income       = +document.getElementById('income').value;
+  const rate         = +document.getElementById('rate').value;
+  const emails       = +document.getElementById('emails').value;
+  const responseRate = +document.getElementById('response').value / 100;
+  const convertRate  = +document.getElementById('convert').value / 100;
+  const sessPerClient = currentConfig.sessPerClient;
+  const refRate       = referralOn ? +document.getElementById('referralRate').value / 100 : 0;
+  const sfPerYear     = superfanOn ? +document.getElementById('sfCount').value : 0;
+  const sfSessions    = superfanOn ? +document.getElementById('sfSessions').value : sessPerClient;
+  const acceptRate    = +document.getElementById('accept').value / 100;
+
+  // Display inputs
+  document.getElementById('incomeDisplay').textContent   = fmtM(income);
+  document.getElementById('rateDisplay').textContent     = fmtM(rate);
+  document.getElementById('emailsDisplay').textContent   = fmt(emails);
+  document.getElementById('responseDisplay').textContent = Math.round(responseRate*100) + '%';
+  document.getElementById('acceptDisplay').textContent   = Math.round(acceptRate*100) + '%';
+  document.getElementById('convertDisplay').textContent  = Math.round(convertRate*100) + '%';
+  if (referralOn) document.getElementById('referralRateDisplay').textContent = Math.round(refRate*100) + '%';
+  if (superfanOn) {
+    document.getElementById('sfCountDisplay').textContent    = sfPerYear;
+    document.getElementById('sfSessionsDisplay').textContent = sfSessions;
+  }
+
+  // Pipeline funnel — three steps
+  const repliesPerMonth        = emails * responseRate;
+  const proofSessionsPerMonth  = repliesPerMonth * acceptRate;
+  const newClientsPerMonth     = proofSessionsPerMonth * convertRate;
+  const newClientsPerYear      = newClientsPerMonth * 12;
+
+  // Super fans are a fixed number per year on top of regular clients
+  const sfClientsPerYear  = sfPerYear;
+  const regClientsPerYear = newClientsPerYear;
+
+  document.getElementById('r-emails').textContent       = fmt(emails);
+  document.getElementById('r-replies').textContent      = fmtD(repliesPerMonth);
+  document.getElementById('r-replies-sub').textContent  = 'at ' + Math.round(responseRate*100) + '% response rate';
+  document.getElementById('r-proof').textContent        = fmtD(proofSessionsPerMonth);
+  document.getElementById('r-proof-sub').textContent    = 'at ' + Math.round(acceptRate*100) + '% accept rate';
+  document.getElementById('r-clients').textContent      = fmtD(newClientsPerMonth);
+  document.getElementById('r-clients-sub').textContent  = 'at ' + Math.round(convertRate*100) + '% conversion';
+
+  // Effective email → client rate
+  const effectiveRate = responseRate * acceptRate * convertRate;
+  const emailsPerClient = effectiveRate > 0 ? Math.round(1 / effectiveRate) : '∞';
+  document.getElementById('r-effective').textContent     = (effectiveRate * 100).toFixed(2) + '%';
+  document.getElementById('r-effective-sub').textContent = '1 paying client per ' + emailsPerClient + ' emails';
+
+  // LTV display
+  document.getElementById('r-ltv-reg').textContent      = fmtM(sessPerClient * rate);
+  document.getElementById('r-ltv-reg-desc').textContent = 'regular · ' + sessPerClient + ' × ' + fmtM(rate);
+  const sfRow = document.getElementById('r-ltv-sf-row');
+  if (superfanOn) {
+    sfRow.style.display = '';
+    document.getElementById('r-ltv-sf').textContent      = fmtM(sfSessions * rate);
+    document.getElementById('r-ltv-sf-desc').textContent = 'super fan · ' + sfSessions + ' × ' + fmtM(rate);
+  } else {
+    sfRow.style.display = 'none';
+  }
+
+  document.getElementById('refHeader').style.display = referralOn ? '' : 'none';
+  document.getElementById('sfHeader').style.display  = superfanOn ? '' : 'none';
+
+  const af = document.getElementById('activeFeatures');
+  af.innerHTML = '';
+  if (referralOn) af.innerHTML += '<span class="feature-tag ref">+ Referrals</span>';
+  if (superfanOn) af.innerHTML += '<span class="feature-tag sf">+ Super Fans</span>';
+
+  // ---- SIMULATION ----
+  // Track cohorts by type and year acquired
+  // Each cohort entry: { count, isSuperFan }
+  // We store as: regCohorts[year] = count, sfCohorts[year] = count, refCohorts[year] = count
+
+  let regCohorts = {}, sfCohorts = {}, refCohorts = {};
+  let goalYear = null;
+  const MAX_YEARS = 15;
+  const tbody = document.getElementById('yearTableBody');
+  tbody.innerHTML = '';
+
+  for (let y = 1; y <= MAX_YEARS; y++) {
+    // Add new cohorts for this year
+    regCohorts[y] = regClientsPerYear;
+    if (superfanOn) sfCohorts[y] = sfClientsPerYear;
+
+    // Calculate revenue and active counts
+    let newRegRev=0, newSfRev=0, retRegRev=0, retSfRev=0, refRevTotal=0;
+    let newCount=0, retCount=0, totalActiveClients=0;
+
+    // Regular cohorts
+    for (const [yr, count] of Object.entries(regCohorts)) {
+      const age = y - +yr;
+      if (age === 0) {
+        newRegRev += count * sessPerClient * rate;
+        newCount  += count;
+        totalActiveClients += count;
+      } else {
+        const active = count * retentionRate(age);
+        retRegRev += active * sessPerClient * rate;
+        retCount  += active;
+        totalActiveClients += active;
+      }
+    }
+
+    // Super fan cohorts
+    if (superfanOn) {
+      for (const [yr, count] of Object.entries(sfCohorts)) {
+        const age = y - +yr;
+        if (age === 0) {
+          newSfRev += count * sfSessions * rate;
+          newCount  += count;
+          totalActiveClients += count;
+        } else {
+          const active = count * sfRetentionRate(age);
+          retSfRev += active * sfSessions * rate;
+          retCount  += active;
+          totalActiveClients += active;
+        }
+      }
+    }
+
+    // Referral cohorts (skip proof session, go straight to paying)
+    if (referralOn) {
+      for (const [yr, count] of Object.entries(refCohorts)) {
+        const age = y - +yr;
+        if (age === 0) {
+          refRevTotal += count * sessPerClient * rate;
+          newCount    += count;
+          totalActiveClients += count;
+        } else {
+          const active = count * retentionRate(age);
+          refRevTotal += active * sessPerClient * rate;
+          retCount    += active;
+          totalActiveClients += active;
+        }
+      }
+      // Generate next year's referrals from all active clients this year
+      refCohorts[y + 1] = (refCohorts[y + 1] || 0) + (totalActiveClients * refRate);
+    }
+
+    const newRevTotal = newRegRev + newSfRev;
+    const retRevTotal = retRegRev + retSfRev;
+    const totalRev    = newRevTotal + retRevTotal + refRevTotal;
+    const hitGoal     = totalRev >= income;
+    if (hitGoal && goalYear === null) goalYear = y;
+
+    const pct = Math.min(totalRev / income, 1);
+    const tr  = document.createElement('tr');
+    if (hitGoal) tr.classList.add('goal-hit');
+
+    let row = `
+      <td>Year ${y}</td>
+      <td>${fmtD(newCount)}</td>
+      <td>${fmtD(retCount)}</td>
+      <td>${fmtM(newRevTotal)}</td>
+      <td>${fmtM(retRevTotal)}</td>`;
+    if (referralOn) row += `<td class="ref-col">${fmtM(refRevTotal)}</td>`;
+    if (superfanOn) row += `<td class="sf-col">${fmtM(newSfRev + retSfRev)}</td>`;
+    row += `
+      <td class="total-col">${fmtM(totalRev)}</td>
+      <td>
+        <div style="font-size:10px;color:var(--muted);text-align:right">${Math.round(pct*100)}%</div>
+        <div class="bar-track"><div class="bar-fill ${hitGoal?'hit':''}" style="width:${pct*100}%"></div></div>
+      </td>`;
+    tr.innerHTML = row;
+    tbody.appendChild(tr);
+
+    if (hitGoal && y >= goalYear + 1) break;
+  }
+
+  // Timeline
+  let tText, tSub;
+  if (newClientsPerMonth < 0.01) { tText='Never'; tSub='Increase outreach or conversion rate'; }
+  else if (!goalYear)             { tText='15+ Yrs'; tSub='Raise your rate or increase outreach'; }
+  else if (goalYear === 1)        { tText='1 Year'; tSub='to reach ' + fmtM(income) + '/year'; }
+  else                            { tText=goalYear+' Years'; tSub='to reach '+fmtM(income)+'/year'; }
+  document.getElementById('r-timeline').textContent     = tText;
+  document.getElementById('r-timeline-sub').textContent = tSub;
+
+  // Reality note
+  const extras = [referralOn?'referrals':null, superfanOn?'super fans':null].filter(Boolean);
+  let msg;
+  if (!goalYear || goalYear >= 15) {
+    msg = 'At this pace, ' + fmtM(income) + '/year is very hard to reach. <strong>Raise your rate</strong> or increase your outreach volume.';
+  } else if (extras.length > 0) {
+    msg = 'Notice what ' + extras.join(' and ') + ' do to the timeline. <strong>These aren\'t bonuses — they\'re multipliers.</strong> A super fan who sends 25 masters a year is worth more than 3 regular clients. A referral compounds the same way every outreach client does — except it cost you nothing to acquire.';
+  } else {
+    msg = 'Notice how the return revenue column grows each year while new client revenue stays flat — <strong>that\'s the machine building itself.</strong> Toggle on referrals and super fans above to see how much faster the timeline moves.';
+  }
+  document.getElementById('r-message').innerHTML = msg;
+}
+
+update();
+</script>
+</body>
+</html>

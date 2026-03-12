@@ -139,26 +139,26 @@
         <input type="range" id="emails" min="10" max="500" step="10" value="100" oninput="update()">
       </div>
       <div class="field">
-        <div class="field-header"><span class="field-label">Outreach Response Rate</span><span class="field-value" id="responseDisplay">10%</span></div>
-        <div class="field-hint">Industry avg: ~10% of cold emails get a reply</div>
-        <input type="range" id="response" min="1" max="40" step="1" value="10" oninput="update()">
+        <div class="field-header"><span class="field-label">Outreach Response Rate</span><span class="field-value" id="responseDisplay">25%</span></div>
+        <div class="field-hint">% of cold emails that get a reply</div>
+        <input type="range" id="response" min="0" max="100" step="1" value="25" oninput="update()">
       </div>
       <div class="field">
-        <div class="field-header"><span class="field-label">Proof Session Accept Rate</span><span class="field-value" id="acceptDisplay">50%</span></div>
-        <div class="field-hint">Of those who reply, ~50% accept a free proof session</div>
-        <input type="range" id="accept" min="5" max="90" step="5" value="50" oninput="update()">
+        <div class="field-header"><span class="field-label">Proof Session Accept Rate</span><span class="field-value" id="acceptDisplay">25%</span></div>
+        <div class="field-hint">Of those who reply, % who accept a free proof session</div>
+        <input type="range" id="accept" min="0" max="100" step="1" value="25" oninput="update()">
       </div>
       <div class="field">
         <div class="field-header"><span class="field-label">Proof Session Convert Rate</span><span class="field-value" id="convertDisplay">25%</span></div>
-        <div class="field-hint">Of those who do a proof session, ~25% become paying clients</div>
-        <input type="range" id="convert" min="5" max="80" step="5" value="25" oninput="update()">
+        <div class="field-hint">Of those who do a proof session, % who become paying clients</div>
+        <input type="range" id="convert" min="0" max="100" step="1" value="25" oninput="update()">
       </div>
 
       <div class="assumptions-box">
         <div class="assumptions-label">Baked-In Assumptions</div>
         <div class="assumption-row"><span>Proof session</span><span class="assumption-val">Free (one-time)</span></div>
         <div class="assumption-row"><span>Sessions per regular client / yr</span><span class="assumption-val" id="sessionsDisplay">7</span></div>
-        <div class="assumption-row"><span>Retention decay Yr 1→2→3→4→5+</span><span class="assumption-val">50→40→30→20→10%</span></div>
+        <div class="assumption-row"><span>Client churn rate per year</span><span class="assumption-val">10%</span></div>
       </div>
 
       <div class="toggles-section">
@@ -201,7 +201,7 @@
               <input type="range" id="sfSessions" min="20" max="60" step="5" value="25" oninput="update()">
             </div>
             <div style="font-size:11px;color:var(--muted);font-style:italic;padding-top:8px;border-top:1px solid var(--border);line-height:1.6;">
-              Retention: 80% → 70% → 60% → 50% (yrs 4–9) → 10% floor
+              Retention: 80% year 1, then 10% churn per year
             </div>
           </div>
         </div>
@@ -292,29 +292,22 @@
 
 <script>
 const configs = {
-  mastering: { rateMin:50, rateMax:300, rateDefault:85, rateStep:5, rateHint:'Industry: $75–100', responseDefault:10, convertDefault:25, sessPerClient:7 },
-  mixing:    { rateMin:100, rateMax:1000, rateDefault:300, rateStep:25, rateHint:'Industry: $300–500', responseDefault:8, convertDefault:25, sessPerClient:4 },
-  production:{ rateMin:500, rateMax:10000, rateDefault:1000, rateStep:100, rateHint:'Starting rate: $1,000+', responseDefault:6, convertDefault:25, sessPerClient:2 }
+  mastering: { rateMin:50, rateMax:300, rateDefault:85, rateStep:5, rateHint:'Industry: $75–100', responseDefault:25, convertDefault:25, sessPerClient:7 },
+  mixing:    { rateMin:100, rateMax:1000, rateDefault:300, rateStep:25, rateHint:'Industry: $300–500', responseDefault:25, convertDefault:25, sessPerClient:4 },
+  production:{ rateMin:500, rateMax:10000, rateDefault:1000, rateStep:100, rateHint:'Starting rate: $1,000+', responseDefault:25, convertDefault:25, sessPerClient:2 }
 };
 let currentConfig = configs.mastering;
 let referralOn = false, superfanOn = false;
 
 function retentionRate(age) {
-  // Regular client retention decay
-  if (age === 1) return 0.50;
-  if (age === 2) return 0.40;
-  if (age === 3) return 0.30;
-  if (age === 4) return 0.20;
-  return 0.10;
+  // 10% churn per year — each year 90% of prior survivors remain
+  return Math.pow(0.90, age);
 }
 
 function sfRetentionRate(age) {
-  // Super fan retention — much stickier
-  if (age === 1) return 0.80;
-  if (age === 2) return 0.70;
-  if (age === 3) return 0.60;
-  if (age >= 4 && age <= 9) return 0.50;
-  return 0.10; // floor after year 10
+  // Super fans same simple churn model but start at higher base
+  // 80% year 1, then 10% churn per year from there
+  return 0.80 * Math.pow(0.90, age - 1);
 }
 
 function toggleCard(type) {
@@ -332,7 +325,7 @@ function switchTab(tab, btn) {
   r.min = c.rateMin; r.max = c.rateMax; r.step = c.rateStep; r.value = c.rateDefault;
   document.getElementById('response').value = c.responseDefault;
   document.getElementById('convert').value  = c.convertDefault;
-  document.getElementById('accept').value   = 50;
+  document.getElementById('accept').value   = 25;
   document.getElementById('rateHint').textContent       = c.rateHint;
   document.getElementById('sessionsDisplay').textContent = c.sessPerClient;
   update();
